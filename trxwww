@@ -1,0 +1,109 @@
+#!/bin/bash
+# Copyright (C) 2008-2010 Artem Kurashov
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+#
+FILE0=`mktemp`
+FILE1=`mktemp`
+if [ "$#" -eq 0 ]; then
+echo "usage: trxwww http://server[:port]/page [wget|curl|local]"
+exit
+fi
+RQSTDOC=`echo "$1" | sed 's/^.*:\/\/[a-zA-Z0-9.:]*\///'`
+if [ "$RQSTDOC" == "" ]; then
+RQSTDOC="index.html"
+fi
+SERVERPORT=`echo $1 | sed 's/^.*://;s/\/.*$//'`
+if [ "$SERVERPORT" == "" ]; then
+SERVERPORT="80"
+fi
+if [ "$2" == "wget" ]; then
+wget -O $FILE0 $1 -U "TRue uniX WWW Browser v1.4 via wget"
+else
+if [ "$2" == "curl" ]; then
+curl $1 -A "TRue uniX WWW Browser v1.4 via curl" > $FILE0
+else
+if [ "$2" == "local" ]; then
+cat $1 > $FILE0
+else
+echo -e "GET /$RQSTDOC HTTP/1.1\r\nUser-Agent: TRue uniX WWW Browser v1.4 via netcat\r\n" | nc -v `echo $1 | sed 's/^.*:\/\///;s/:.*$//'` $SERVERPORT > $FILE0
+fi
+fi
+fi
+LCHSET=`echo $LANG|sed 's/^.*\.//'`
+LCHSETTST=`iconv -l | grep $LCHSET//`
+if [ "$LCHSETTST" == "" ]; then
+LCHSET="ASCII"
+fi
+HCHSET=`cat $FILE0 | grep http-equiv= | grep charset= | head -n 1 | sed 's/^.*charset=//;s/".*$//'`
+if [ "$HCHSET" == "" ]; then
+HCHSET="UTF-8"
+fi
+iconv -c -f $HCHSET -t $LCHSET -o $FILE0 $FILE0
+awk '{if ($NF=="end_here|") printf "\n"; else if ($NF=="start_here|") printf ""; else printf $0}' $FILE0 > $FILE1
+cat $FILE1 > $FILE0
+rm $FILE1
+touch $FILE1
+sed -i 's/\r//g
+s/<script>.*<\/script>//g
+s/<style>.*<\/style>//g
+s/<\/?TR|tr.*>/\n/g
+s/<\/?TD|td.*>/|/g
+s/</\n</g
+s/">/">\n/g
+s/>/>\n/g' $FILE0
+grep -E "href|img|http|ftp" $FILE0 >> $FILE1
+sed -i 's/^.*http/http/g
+s/<img.*src="//g
+s/<.*href="//g
+s/"\ alt=".*$//g
+s/^.*ftp/ftp/g
+s/">//g
+s/>.*$//g
+s/"\;.*$//g;
+s/DOCTYPE//g' $FILE1
+sed -i '/<.*>/d
+/^$/d
+s/&nbsp;/\ /g
+s/&lt;/</g
+s/&gt;/>/g
+s/&iexcl;/i/g
+s/&cent;/-c-/g
+s/&pound;/-L-/g
+s/&curren;/CUR/g
+s/&yen;/YEN/g
+s/&brvbar;/|/g
+s/&sect;/S/g
+s/&uml;/"/g
+s/&copy;/(c)/g
+s/&laquo;/<</g
+s/&not;/NOT/g
+s/&shy;//g
+s/&reg;/(R)/g
+s/&macr;/-/g
+s/&deg;/(deg)/g
+s/&plusmn;/+-/g
+s/&sup2;/^2/g
+s/&sup3;/^3/g
+s/&acute;/"/g
+s/&micro;/u/g
+s/&para;/P/g
+s/&middot;/./g
+s/&cedil;/,/g
+s/&sup1;/1/g
+s/&ordm;/-a/g
+s/&raquo;/>>/g
+s/&frac14;/1\/4/g
+s/&frac12;/1\/2/g
+s/&frac34;/3\/4/g
+s/&iquest;/?/g
+s/&ndash;/-/g
+s/&mdash;/--/g
+s/&lsquo;/`/g
+s/&rsquo;/"/g
+s/&sbquo;/"/g
+s/&ldquo;/"/g
+s/&rdquo;/"/g
+s/&bdquo;/"/g' $FILE0
+cat $FILE0 >> $FILE1
+cat $FILE1
+rm $FILE0 $FILE1

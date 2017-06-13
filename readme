@@ -1,0 +1,7 @@
+trxwww - noninteractive TRue uniX WWW browser (bash script).
+Puts links and text from requested page to stdout.
+
+usage: trxwww http://server:port/page [wget|curl|local]
+
+Copyright (C) 2008-2010 Artem Kurashov
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
